@@ -1,2 +1,5 @@
-# Summer_Enrolment
-Code used to report student enrolment for summer programs
+# Enrolment_Tracking
+Code used to report student enrolment.
+
+summer_data_analyzer.py reports on enrolment for summer programs
+
