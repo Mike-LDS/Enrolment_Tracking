@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-
+'''
+Summer Enrolment Reporting Code
+'''
 import csv
 import pandas as pd
 import numpy as np
@@ -13,7 +15,7 @@ lessons = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[], 'Program':[], 
 
 students = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[], 'Status':[], 'New/Returning':[], 'Program':[], 'Location':[], '1-to-1 Hours':[], '$/hr from Family':[], 'CKNW Approval Date':[], 'CKNW Expiry Date':[],
           'CKNW Funding':[], 'Variety Approval Date':[], 'Variety Expiry Date':[], 'Variety Funding':[], 'AFU Expiry Date':[], 'AFU Funding':[], 'JP or other':[], 'Other Funding':[],
-            'Date of Birth':[], 'Grade @ Spet 2021':[], 'Family ID':[], 'Parent/Guardian':[], 'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[], 'Summer Camps':[]})
+            'Date of Birth':[], 'Grade @ Spet 2021':[], 'Family ID':[], 'Parent/Guardian':[], 'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[], 'Summer Camps - Live':[]})
 
 
 ## Compiling Lessons Data
@@ -72,8 +74,8 @@ for student in uniques:
     last_name = stu_data['Last Name'].mode()[0]
 
     # Filtered Lesson Dates
-    start_date = pd.to_datetime('2022-07-03 00:00:00')
-    end_date = pd.to_datetime('2022-07-10 00:00:00')
+    start_date = pd.to_datetime('2022-07-10 00:00:00')
+    end_date = pd.to_datetime('2022-07-17 00:00:00')
     filtered = stu_data[(stu_data['Date'] > start_date) & (stu_data['Date'] < end_date)] 
     try:
         pro = filtered['Program'].mode()[0]
@@ -96,7 +98,7 @@ for student in uniques:
     except:
         rate = ''
         
-    line = pd.DataFrame({'ID':student, 'First Name':first_name, 'Last Name':last_name, 'Status':'Live' , 'Program':pro, 'Location':loc, '1-to-1 Hours':hrs, '$/hr from Family':rate, 'Summer Camps':sc}, index=[num])
+    line = pd.DataFrame({'ID':student, 'First Name':first_name, 'Last Name':last_name, 'Status':'Live' , 'Program':pro, 'Location':loc, '1-to-1 Hours':hrs, '$/hr from Family':rate, 'Summer Camps - Live':sc}, index=[num])
     students = pd.concat([students,line])
 
     if pro == 'LDS Access':
