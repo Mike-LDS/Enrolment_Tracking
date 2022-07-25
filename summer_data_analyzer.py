@@ -74,8 +74,8 @@ for student in uniques:
     last_name = stu_data['Last Name'].mode()[0]
 
     # Filtered Lesson Dates
-    start_date = pd.to_datetime('2022-07-10 00:00:00')
-    end_date = pd.to_datetime('2022-07-17 00:00:00')
+    start_date = pd.to_datetime('2022-07-11 00:00:00')
+    end_date = pd.to_datetime('2022-07-16 00:00:00')
     filtered = stu_data[(stu_data['Date'] > start_date) & (stu_data['Date'] < end_date)] 
     try:
         pro = filtered['Program'].mode()[0]
@@ -169,7 +169,7 @@ with open('users (1).csv', newline='') as csvfile:
                     students.loc[(students['ID'] == family['ID'].values[i], 'Status')] = row['Status']
             
 ## Compiling Funding Data
-funding = load_workbook('STUDENTS - 3RD PARTY COVERAGE - 2022.xlsx', data_only=True)
+funding = load_workbook('STUDENTS - 3RD PARTY COVERAGE - 2022 to 2023.xlsx', data_only=True)
 
 for j in range(len(uniques)):
     student = students.loc[(students['ID'] == uniques[j])]
@@ -188,7 +188,7 @@ for j in range(len(uniques)):
             fn = firstname[i].value
             sn = firstname[i].value
         
-        if student['First Name'].values[0].upper() == fn and student['Last Name'].values[0].upper() == sn and student['AFU Funding'].isnull()[0]:
+        if (student['First Name'].values[0].upper()).replace(' ','') == fn and (student['Last Name'].values[0].upper()).replace(' ','') == sn and student['AFU Funding'].isnull()[0]:
             try:
                 students.loc[(students['ID'] == uniques[j], 'AFU Funding')] = int(AFU_funds[i].value)
                 students.loc[(students['ID'] == uniques[j], 'AFU')] = expires[i].value
@@ -199,9 +199,9 @@ for j in range(len(uniques)):
     cknw_ws = funding['CKNW']
     surname = cknw_ws['B:B']
     firstname = cknw_ws['C:C']
-    granted = cknw_ws['I:I']
-    expires = cknw_ws['J:J']
-    cknw_fund = cknw_ws['K:K']
+    granted = cknw_ws['H:H']
+    expires = cknw_ws['I:I']
+    cknw_fund = cknw_ws['J:J']
     for i in range(len(surname)):
         try:
             fn = (firstname[i].value).replace(' ','')
