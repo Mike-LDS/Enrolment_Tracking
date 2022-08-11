@@ -74,8 +74,8 @@ for student in uniques:
     last_name = stu_data['Last Name'].mode()[0]
 
     # Filtered Lesson Dates
-    start_date = pd.to_datetime('2022-07-11 00:00:00')
-    end_date = pd.to_datetime('2022-07-16 00:00:00')
+    start_date = pd.to_datetime('2022-08-07 00:00:00')
+    end_date = pd.to_datetime('2022-08-14 00:00:00')
     filtered = stu_data[(stu_data['Date'] > start_date) & (stu_data['Date'] < end_date)] 
     try:
         pro = filtered['Program'].mode()[0]
@@ -191,7 +191,7 @@ for j in range(len(uniques)):
         if (student['First Name'].values[0].upper()).replace(' ','') == fn and (student['Last Name'].values[0].upper()).replace(' ','') == sn and student['AFU Funding'].isnull()[0]:
             try:
                 students.loc[(students['ID'] == uniques[j], 'AFU Funding')] = int(AFU_funds[i].value)
-                students.loc[(students['ID'] == uniques[j], 'AFU')] = expires[i].value
+                students.loc[(students['ID'] == uniques[j], 'AFU Expiry Date')] = expires[i].value
             except:
                 students.loc[(students['ID'] == uniques[j], 'AFU Funding')] = 0
 
@@ -237,6 +237,3 @@ for j in range(len(uniques)):
             
 export = students.drop(columns=['ID', 'Family ID'])
 export.to_csv('test.csv', index=False)
-
-
-                
