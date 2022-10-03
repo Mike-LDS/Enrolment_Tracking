@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 from openpyxl import load_workbook
 
-
 #--------------------------------------------------------------------------------- One to One Fee Table Compiling ---------------------------------------------------------------------------------------#
 
 
@@ -49,25 +48,47 @@ with open('appointments.csv', newline='') as csvfile: # Lesson Export form Sept 
 
 
 ## Compiling Data for Unique Students
-uniques = lessons['ID'].unique()
+start_date = pd.to_datetime('2022-09-07 00:00:00')
+end_date = pd.to_datetime('2023-06-25 00:00:00')
+today = pd.to_datetime(pd.Timestamp.today().date())
+
+# Filter out students with no future lessons
+filtered = lessons[(lessons['Date'] > today) & (lessons['Date'] < end_date)]
+uniques = filtered['ID'].unique()
 num = 0
 
 for student in uniques:
-    start_date = pd.to_datetime('2022-09-07 00:00:00')
-    end_date = pd.to_datetime('2023-06-25 00:00:00')
-    filtered = lessons.loc[(lessons['ID']==student)]
-    stu_data = filtered[(filtered['Date'] > start_date) & (filtered['Date'] < end_date)]
-    
+    stu_data = filtered.loc[(filtered['ID']==student)]
     first_name = stu_data['First Name'].mode()[0]
     last_name = stu_data['Last Name'].mode()[0]
+    nx_lesson = min(stu_data['Date'])                           # Date of next lesson
+    start = min(lessons.loc[(lessons['ID']==student)]['Date'])  # Start Date
+    end = max(stu_data['Date'])                                 # Date of last lesson
     pro = stu_data['Program'].mode()[0]
     loc = stu_data['Location'].mode()[0]
-    hrs_sum = stu_data['Hours'].sum()
-    start = min(stu_data['Date'])
-    end = max(stu_data['Date'])
-    weeks = (abs(end - start).days)/7
-    hrs = hrs_sum/(weeks-4)
-    hrs = round(hrs * 2) / 2
+    hrs_sum = stu_data['Hours'].sum()                           # Sum of hours
+                    
+    # Determining Weeks of Lessons   
+    if nx_lesson < pd.to_datetime('2022-12-18 00:00:00'):       # Starts before Christmas Break
+        if end > pd.to_datetime('2023-03-26 00:00:00'):         # and ends after Spring Break
+            weeks = ((abs(end - nx_lesson).days)/7) - 4
+        if end > pd.to_datetime('2023-01-01 00:00:00'):         # and ends after Christmas Break, but before Spring Break
+            weeks = ((abs(end - nx_lesson).days)/7) - 2
+        else:                                                   # and ends before Christmas Break
+            weeks = ((abs(end - nx_lesson).days)/7)
+    elif nx_lesson < pd.to_datetime('2023-03-12 00:00:00'):     # Starts before Spring Break, but after Christmas
+        if end > pd.to_datetime('2023-03-26 00:00:00'):         # and ends after Spring Break
+            weeks = ((abs(end - nx_lesson).days)/7) - 2
+        else:                                                   # and ends before Spring Break
+            weeks = ((abs(end - nx_lesson).days)/7)
+    else:                                                       # Starts after Spring Break
+        weeks = ((abs(end - nx_lesson).days)/7)
+
+    if weeks < 1:
+        weeks = 1
+
+    hrs = hrs_sum/weeks                                 # Calcualate hours per week
+    hrs = round(hrs * 2) / 2                            # Round to the nearest .5
     if hrs == 0:
         hrs = ''
         
@@ -83,6 +104,9 @@ for student in uniques:
         students.loc[(students['ID'] == student, 'JP or other')] = 'Grant Funded'
     if pro == 'RISE Now':
         students.loc[(students['ID'] == student, 'JP or other')] = 'Sponsored'
+    if pro == 'RISE at School' and loc == 'Thunderbird Elementary School':
+        students.loc[(students['ID'] == student, 'JP or other')] = 'Sponsored'
+        
             
 ## Compiling Funding Data
 funding = load_workbook('THIRD PARTY COVERAGE - 2022-23.xlsx', data_only=True)
