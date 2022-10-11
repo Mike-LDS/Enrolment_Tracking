@@ -18,7 +18,7 @@ lessons = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[], 'Program':[], 
 
 students = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[], 'Start Date':[], 'Program':[], 'Location':[], 'Hours/Week':[], '$/hr from Family':[], 'CKNW Submitted Date':[],
                             'CKNW Approval Date':[], 'CKNW Expiry Date':[], 'CKNW Funding':[], 'Variety Submitted Date':[], 'Variety Approval Date':[], 'Variety Expiry Date':[], 'Variety Funding':[],
-                            'AFU Submitted Date':[], 'AFU Expiry Date':[], 'AFU Funding':[], 'JP or other':[], 'Other Funding':[]})
+                            'AFU Submitted Date':[], 'AFU Expiry Date':[], 'AFU Funding':[], 'JP or other':[], 'Other Funding':[], 'Status':[]})
 
 ## Compiling Lessons Data
 with open('appointments.csv', newline='') as csvfile: # Lesson Export form Sept 7, 2022 to June 24, 2023
@@ -51,53 +51,65 @@ with open('appointments.csv', newline='') as csvfile: # Lesson Export form Sept 
 start_date = pd.to_datetime('2022-09-07 00:00:00')
 end_date = pd.to_datetime('2023-06-25 00:00:00')
 today = pd.to_datetime(pd.Timestamp.today().date())
+uniques = lessons['ID'].unique()
 
-# Filter out students with no future lessons
-filtered = lessons[(lessons['Date'] > today) & (lessons['Date'] < end_date)]
-uniques = filtered['ID'].unique()
+
 num = 0
 
 for student in uniques:
-    stu_data = filtered.loc[(filtered['ID']==student)]
+    stu_data = lessons.loc[(lessons['ID']==student)]
     first_name = stu_data['First Name'].mode()[0]
     last_name = stu_data['Last Name'].mode()[0]
-    nx_lesson = min(stu_data['Date'])                           # Date of next lesson
-    start = min(lessons.loc[(lessons['ID']==student)]['Date'])  # Start Date
+    start = min(stu_data['Date'])                               # Start Date
     end = max(stu_data['Date'])                                 # Date of last lesson
-    pro = stu_data['Program'].mode()[0]
-    loc = stu_data['Location'].mode()[0]
-    hrs_sum = stu_data['Hours'].sum()                           # Sum of hours
-                    
-    # Determining Weeks of Lessons   
-    if nx_lesson < pd.to_datetime('2022-12-18 00:00:00'):       # Starts before Christmas Break
-        if end > pd.to_datetime('2023-03-26 00:00:00'):         # and ends after Spring Break
-            weeks = ((abs(end - nx_lesson).days)/7) - 4
-        if end > pd.to_datetime('2023-01-01 00:00:00'):         # and ends after Christmas Break, but before Spring Break
-            weeks = ((abs(end - nx_lesson).days)/7) - 2
-        else:                                                   # and ends before Christmas Break
-            weeks = ((abs(end - nx_lesson).days)/7)
-    elif nx_lesson < pd.to_datetime('2023-03-12 00:00:00'):     # Starts before Spring Break, but after Christmas
-        if end > pd.to_datetime('2023-03-26 00:00:00'):         # and ends after Spring Break
-            weeks = ((abs(end - nx_lesson).days)/7) - 2
-        else:                                                   # and ends before Spring Break
-            weeks = ((abs(end - nx_lesson).days)/7)
-    else:                                                       # Starts after Spring Break
-        weeks = ((abs(end - nx_lesson).days)/7)
 
-    if weeks < 1:
-        weeks = 1
+    # Filter out students with no future lessons - Live
+    filtered = stu_data[(stu_data['Date'] > today) & (stu_data['Date'] < end_date)]
+    hrs_sum = filtered['Hours'].sum()                           # Sum of hours
 
-    hrs = hrs_sum/weeks                                 # Calcualate hours per week
-    hrs = round(hrs * 2) / 2                            # Round to the nearest .5
-    if hrs == 0:
+    if hrs_sum != 0:
+        status = 'Live'
+        pro = filtered['Program'].mode()[0]
+        loc = filtered['Location'].mode()[0]
+        nx_lesson = min(filtered['Date'])                       # Date of next lesson
+               
+        # Determining Weeks of Lessons   
+        if nx_lesson < pd.to_datetime('2022-12-18 00:00:00'):   # Starts before Christmas Break
+            if end > pd.to_datetime('2023-03-26 00:00:00'):     # and ends after Spring Break
+                weeks = ((abs(end - nx_lesson).days)/7) - 4
+            if end > pd.to_datetime('2023-01-01 00:00:00'):     # and ends after Christmas Break, but before Spring Break
+                weeks = ((abs(end - nx_lesson).days)/7) - 2
+            else:                                               # and ends before Christmas Break
+                weeks = ((abs(end - nx_lesson).days)/7)
+        elif nx_lesson < pd.to_datetime('2023-03-12 00:00:00'): # Starts before Spring Break, but after Christmas
+            if end > pd.to_datetime('2023-03-26 00:00:00'):     # and ends after Spring Break
+                weeks = ((abs(end - nx_lesson).days)/7) - 2
+            else:                                               # and ends before Spring Break
+                weeks = ((abs(end - nx_lesson).days)/7)
+        else:                                                   # Starts after Spring Break
+            weeks = ((abs(end - nx_lesson).days)/7)
+
+        if weeks < 1:
+            weeks = 1
+
+        hrs = hrs_sum/weeks                                 # Calcualate hours per week
+        hrs = round(hrs * 2) / 2                            # Round to the nearest .5
+        if hrs == 0:
+            hrs = ''
+            
+        try:
+            rate = filtered['$/hr from Family'].mode()[0]
+        except:
+            rate = ''
+
+    else:
+        pro = stu_data['Program'].mode()[0]
+        loc = stu_data['Location'].mode()[0]
         hrs = ''
-        
-    try:
-        rate = stu_data['$/hr from Family'].mode()[0]
-    except:
         rate = ''
+        status = 'Dormant'
         
-    line = pd.DataFrame({'ID':student, 'First Name':first_name, 'Last Name':last_name, 'Start Date':start , 'Program':pro, 'Location':loc, 'Hours/Week':hrs, '$/hr from Family':rate}, index=[num])
+    line = pd.DataFrame({'ID':student, 'First Name':first_name, 'Last Name':last_name, 'Start Date':start , 'Program':pro, 'Location':loc, 'Hours/Week':hrs, '$/hr from Family':rate, 'Status':status}, index=[num])
     students = pd.concat([students,line])
 
     if loc == 'LDS Access':
@@ -106,6 +118,8 @@ for student in uniques:
         students.loc[(students['ID'] == student, 'JP or other')] = 'Sponsored'
     if pro == 'RISE at School' and loc == 'Thunderbird Elementary School':
         students.loc[(students['ID'] == student, 'JP or other')] = 'Sponsored'
+    if first_name == 'St.':
+        students.loc[(students['ID'] == student, '$/hr from Family')] = 27.5
         
             
 ## Compiling Funding Data
@@ -211,23 +225,24 @@ for j in range(len(uniques)):
 
         if(student['First Name'].values[0].upper()).replace(' ','') == fn and (student['Last Name'].values[0].upper()).replace(' ','') == sn:
             if funder[i].value == 'CKNW':
-                if submitted[i].value != '':
+                if submitted[i].value != None and submitted[i].value != ' ' and submitted[i].value != '' and str(notes[i].value).lower() != 'declined':
                     students.loc[(students['ID'] == uniques[j],'CKNW Submitted Date')] = submitted[i].value
                 else:
                     students.loc[(students['ID'] == uniques[j],'CKNW Submitted Date')] = notes[i].value
             elif funder[i].value  == 'Variety':
-                if submitted[i].value != '':
+                if submitted[i].value != None and submitted[i].value != ' ' and submitted[i].value != '':
                     students.loc[(students['ID'] == uniques[j],'Variety Submitted Date')] = submitted[i].value
                 else:
                     students.loc[(students['ID'] == uniques[j],'Variety Submitted Date')] = notes[i].value
             elif funder[i].value  == 'AFU':
-                if submitted[i].value != '':
+                if submitted[i].value != None and submitted[i].value != ' ' and submitted[i].value != '':
                     students.loc[(students['ID'] == uniques[j],'AFU Submitted Date')] = submitted[i].value
                 else:
                     students.loc[(students['ID'] == uniques[j],'AFU Submitted Date')] = notes[i].value
     
-export = students.drop(columns=['ID'])
-students.to_csv('OnetoOne_feeTable.csv', index=False)
+live_students = students[(students['Status'] == 'Live')]
+export = live_students.drop(columns=['Status'])
+export.to_csv('OnetoOne_feeTable.csv', index=False)
 
 #--------------------------------------------------------------------------- Student Information & Ernolment Table Compiling ----------------------------------------------------------------------------#
 
@@ -236,35 +251,40 @@ student_info = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[],'Status':[
                              'One-to-One: RISE at Home':[], 'One-to-One: LDS Access':[], 'One-to-One: Pipeline':[],'RISE at School':[], 'SLP':[], 'RISE TEAM':[], 'RISE Now':[], 'Spring Break Camps':[],
                              'Early RISErs: Fall':[], 'KTEA-3':[]})
 
-# Add Students from 1 to 1
+# Add Live Students from 1 to 1
 students = students.reset_index()
 num = 0
 for index, student in students.iterrows():
-    line = pd.DataFrame({'ID':student['ID'], 'First Name':student['First Name'], 'Last Name':student['Last Name']}, index=[num])
+    line = pd.DataFrame({'ID':student['ID'], 'First Name':student['First Name'], 'Last Name':student['Last Name'], 'Status':student['Status']}, index=[num])
     num = num + 1
     student_info = pd.concat([student_info,line])
 
 for index, student in students.iterrows():
+    if student['Status'] == 'Live':
+        pro_status = 'Enrolled'
+    else:
+        pro_status = 'Discontinued'
+        
     if student['Program'] == 'Explicit Instruction' and student['Location'] == 'RISE at LC: East Van':
-        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: East Van')] = 'Enrolled'
+        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: East Van')] = pro_status
     elif student['Program'] == 'Explicit Instruction' and student['Location'] == 'RISE at LC: North Van':
-        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: North Van')] = 'Enrolled'
+        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: North Van')] = pro_status
     elif student['Program'] == 'Explicit Instruction' and student['Location'] == 'RISE at Home':
-        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: RISE at Home')] = 'Enrolled'
+        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: RISE at Home')] = pro_status
     elif student['Program'] == 'Explicit Instruction' and student['Location'] == 'LDS Access':
-        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: LDS Access')] = 'Enrolled'
+        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: LDS Access')] = pro_status
     elif student['Program'] == 'Homework Support' and student['Location'] == 'RISE at LC: East Van':
-        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: East Van')] = 'Enrolled'
+        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: East Van')] = pro_status
     elif student['Program'] == 'Homework Support' and student['Location'] == 'RISE at LC: North Van':
-        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: North Van')] = 'Enrolled'
+        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: North Van')] = pro_status
     elif student['Program'] == 'Homework Support' and student['Location'] == 'RISE at Home':
-        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: RISE at Home')] = 'Enrolled'
+        student_info.loc[(student_info['ID'] == student['ID'],'One-to-One: RISE at Home')] = pro_status
     elif student['Program'] == 'RISE at School':
-        student_info.loc[(student_info['ID'] == student['ID'],'RISE at School')] = 'Enrolled'
+        student_info.loc[(student_info['ID'] == student['ID'],'RISE at School')] = pro_status
     elif student['Program'] == 'RISE TEAM':
-        student_info.loc[(student_info['ID'] == student['ID'],'RISE TEAM')] = 'Enrolled'
+        student_info.loc[(student_info['ID'] == student['ID'],'RISE TEAM')] = pro_status
     elif student['Program'] == 'RISE Now':
-        student_info.loc[(student_info['ID'] == student['ID'],'RISE Now')] = 'Enrolled'
+        student_info.loc[(student_info['ID'] == student['ID'],'RISE Now')] = pro_status
     else:
         print(student)
 
@@ -273,7 +293,6 @@ with open('users.csv', newline='') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         if row['\ufeffID'] in uniques:
-            student_info.loc[(student_info['ID'] == row['\ufeffID'],'Status')] = 'Live'
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'Date of Birth')] = row['Date of birth']
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'Grade at Sept 2022')] = row['Academic Year']
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'Family ID')] = row['Client ID']
@@ -285,8 +304,8 @@ with open('users.csv', newline='') as csvfile:
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'School')] = row['School']
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'Diagnosis')] = row['Diagnosis']
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'BC Designation')] = row['BC Designation']
-            if '22/23 SLP' in row['Labels']:
-                student_info.loc[(student_info['ID'] == row['\ufeffID'],'SLP')] = 'Enrolled'
+            #if '22/23 SLP' in row['Labels']:
+            #    student_info.loc[(student_info['ID'] == row['\ufeffID'],'SLP')] = 'Enrolled'
                 
         elif '2022/23 One-to-one Instruction' in row['Labels']:
             line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'], 'Status': 'Prospect (Pipeline)', 'Date of Birth':row['Date of birth'],
