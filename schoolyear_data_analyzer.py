@@ -11,10 +11,13 @@ from openpyxl import load_workbook
 
 
 programs = ['Explicit Instruction', 'Homework Support','RISE Now', 'RISE TEAM', 'LDS Access', 'RISE at School']
+other_pro = ['KTEA-3']
+
 locations = ['East Van', 'North Van', 'RISE @ Home', 'LDS Access']
 loc_convert = ['RISE at LC: East Van', 'RISE at LC: North Van', 'RISE at Home', 'LDS Access']
 
 lessons = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[], 'Program':[], 'Location':[], 'Hours':[], '$/hr from Family':[], 'Date':[]})
+other_lessons = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[], 'Program':[], 'Location':[], 'Hours':[], '$/hr from Family':[], 'Date':[]})
 
 students = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[], 'Start Date':[], 'Program':[], 'Location':[], 'Hours/Week':[], '$/hr from Family':[], 'CKNW Submitted Date':[],
                             'CKNW Approval Date':[], 'CKNW Expiry Date':[], 'CKNW Funding':[], 'Variety Submitted Date':[], 'Variety Approval Date':[], 'Variety Expiry Date':[], 'Variety Funding':[],
@@ -38,13 +41,21 @@ with open('appointments.csv', newline='') as csvfile: # Lesson Export form Sept 
                 loc = row['location']
 
             date = pd.to_datetime(row['start'], format='%d/%m/%Y %I:%M %p')
-
             if pro != '':
+                
                 line = pd.DataFrame({'ID':row['recipient_id_1'], 'First Name': name[0], 'Last Name': name[1], 'Program':pro, 'Location':loc, 'Hours':float(row['units_raw']),
                                  '$/hr from Family':float(row['charge_rate_1']), 'Date':date}, index=[0])
                 lessons = pd.concat([lessons,line])
             else:
-                print(row['topic'])
+                for i in range(len(other_pro)):
+                    if other_pro[i].lower() in row['topic'].lower():
+                        pro = other_pro[i]
+                if pro != '':
+                    line = pd.DataFrame({'ID':row['recipient_id_1'], 'First Name': name[0], 'Last Name': name[1], 'Program':pro, 'Location':loc, 'Hours':float(row['units_raw']),
+                                 '$/hr from Family':float(row['charge_rate_1']), 'Date':date}, index=[0])
+                    other_lessons = pd.concat([other_lessons,line])
+                else:
+                    print(row['topic'])
 
 
 ## Compiling Data for Unique Students
@@ -112,6 +123,7 @@ for student in uniques:
     line = pd.DataFrame({'ID':student, 'First Name':first_name, 'Last Name':last_name, 'Start Date':start , 'Program':pro, 'Location':loc, 'Hours/Week':hrs, '$/hr from Family':rate, 'Status':status}, index=[num])
     students = pd.concat([students,line])
 
+    # Funding Adjustments
     if loc == 'LDS Access':
         students.loc[(students['ID'] == student, 'JP or other')] = 'Grant Funded'
     if pro == 'RISE Now':
@@ -120,7 +132,15 @@ for student in uniques:
         students.loc[(students['ID'] == student, 'JP or other')] = 'Sponsored'
     if first_name == 'St.':
         students.loc[(students['ID'] == student, '$/hr from Family')] = 27.5
-        
+
+    # Student Specific Adjustments
+    if student == '1785364':
+        students.loc[(students['ID'] == student, 'Program')] = 'RISE at School'
+        students.loc[(students['ID'] == student, 'Location')] = 'KLEOS'
+        students.loc[(students['ID'] == student, 'JP or other')] = 'Sponsored'
+    if student == '1379956':
+        students.loc[(students['ID'] == student, 'Program')] = 'RISE at School'
+        students.loc[(students['ID'] == student, 'Location')] = 'Lord Strathcona Elementary'
             
 ## Compiling Funding Data
 funding = load_workbook('THIRD PARTY COVERAGE - 2022-23.xlsx', data_only=True)
@@ -240,6 +260,15 @@ for j in range(len(uniques)):
                 else:
                     students.loc[(students['ID'] == uniques[j],'AFU Submitted Date')] = notes[i].value
     
+
+with open('users.csv', newline='') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        if row['\ufeffID'] in uniques and 'SD 5/ DL' in row['Labels']:
+            students.loc[(students['ID'] == row['\ufeffID'], 'Program')] = 'RISE at School'
+            students.loc[(students['ID'] == row['\ufeffID'], 'Location')] = 'SD 5/DL'
+
+
 live_students = students[(students['Status'] == 'Live')]
 export = live_students.drop(columns=['Status'])
 export.to_csv('OnetoOne_feeTable.csv', index=False)
@@ -251,7 +280,13 @@ student_info = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[],'Status':[
                              'One-to-One: RISE at Home':[], 'One-to-One: LDS Access':[], 'One-to-One: Pipeline':[],'RISE at School':[], 'SLP':[], 'RISE TEAM':[], 'RISE Now':[], 'Spring Break Camps':[],
                              'Early RISErs: Fall':[], 'KTEA-3':[]})
 
-# Add Live Students from 1 to 1
+pipe_info = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[],'Status':[], 'New/Returning':[],'Date of Birth':[], 'Grade at Sept 2022':[], 'Family ID':[], 'Parent/Guardian':[],
+                        'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[]})
+
+er_info = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[],'Status':[], 'New/Returning':[],'Date of Birth':[], 'Grade at Sept 2022':[], 'Family ID':[], 'Parent/Guardian':[],
+                        'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[]})
+
+# AddStudents from 1 to 1
 students = students.reset_index()
 num = 0
 for index, student in students.iterrows():
@@ -288,11 +323,28 @@ for index, student in students.iterrows():
     else:
         print(student)
 
+# Adding Other Programs w/ Lessons
+other_lessons = other_lessons.reset_index()
+other_uni = other_lessons['ID'].unique()
+stu_uni = student_info['ID'].unique()
+
+for student in other_uni:
+    if student not in stu_uni:
+        fn = other_lessons.loc[(other_lessons['ID'] == student)]['First Name'][0]
+        ln = other_lessons.loc[(other_lessons['ID'] == student)]['Last Name'][0]
+        line = pd.DataFrame({'ID':student, 'First Name':fn, 'Last Name':ln, 'Status':'Live'}, index=[num])
+        student_info = pd.concat([student_info,line])
+        num = num + 1
+    for pro in other_lessons.loc[(other_lessons['ID'] == student)]['Program']:
+        if pro == 'KTEA-3':
+            student_info.loc[(student_info['ID'] == student,'KTEA-3')] = 'Enrolled'
+
+
 # Openning Student Export
 with open('users.csv', newline='') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
-        if row['\ufeffID'] in uniques:
+        if row['\ufeffID'] in student_info['ID'].unique():
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'Date of Birth')] = row['Date of birth']
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'Grade at Sept 2022')] = row['Academic Year']
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'Family ID')] = row['Client ID']
@@ -304,31 +356,54 @@ with open('users.csv', newline='') as csvfile:
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'School')] = row['School']
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'Diagnosis')] = row['Diagnosis']
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'BC Designation')] = row['BC Designation']
-            #if '22/23 SLP' in row['Labels']:
-            #    student_info.loc[(student_info['ID'] == row['\ufeffID'],'SLP')] = 'Enrolled'
                 
         elif '2022/23 One-to-one Instruction' in row['Labels']:
             line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'], 'Status': 'Prospect (Pipeline)', 'Date of Birth':row['Date of birth'],
                                  'Grade at Sept 2022':row['Academic Year'],'Family ID':row['Client ID'], 'Parent/Guardian':row['Client Name'], 'Family Email':row['Client Email'],
                                  'Address':row['Street Address'], 'City':row['Town'], 'Postal Code':row['Zipcode/Postcode'], 'School':row['School'], 'Diagnosis':row['Diagnosis'],
                                  'BC Designation':row['BC Designation'], 'One-to-One: Pipeline':'Applied'}, index=[num])
-            student_info = pd.concat([student_info,line])
-            num = num + 1
+            pipe_info = pd.concat([pipe_info,line])
+
                                                      
-        elif '2022 Early RISErs - Fall' in row['Labels']:
-            line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'], 'Status': 'Prospect (Pipeline)', 'Date of Birth':row['Date of birth'],
+        elif '2022 Early RISErs - Fall' in row['Labels']:           
+            line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'], 'Date of Birth':row['Date of birth'],
                                  'Grade at Sept 2022': row['Academic Year'],'Family ID':row['Client ID'], 'Parent/Guardian':row['Client Name'], 'Family Email':row['Client Email'],
                                  'Address':row['Street Address'], 'City':row['Town'], 'Postal Code':row['Zipcode/Postcode'], 'School':row['School'], 'Diagnosis':row['Diagnosis'],
-                                 'BC Designation':row['BC Designation'], 'Early RISErs: Fall':'Applied'}, index=[num])
-            student_info = pd.concat([student_info,line])
-            num = num + 1
+                                 'BC Designation':row['BC Designation']}, index=[0])
+            er_info = pd.concat([er_info,line])
 
 # Openning the Client Export
 families = student_info['Family ID'].unique()
+pipe_fam = pipe_info['Family ID'].unique()
+er_families = er_info['Family ID'].unique()
+
 with open('users (1).csv', newline='') as csvfile:
     reader = csv.DictReader(csvfile)
-    if row['\ufeffID'] in families and row['Status'] == 'Dormant':
-        student_info.loc[(student_info['Family ID'] == row['\ufeffID'],'Status')] = 'Dormant'
+    for row in reader:
+        if row['\ufeffID'] in families:
+            # Fill in missing Address information
+            if student_info.loc[(student_info['Family ID'] == row['\ufeffID'])]['Postal Code'].values[0] == '':
+                student_info.loc[(student_info['Family ID'] == row['\ufeffID'], 'Postal Code')] = row['Zipcode/Postcode']
+            if student_info.loc[(student_info['Family ID'] == row['\ufeffID'])]['City'].values[0] == '':
+                student_info.loc[(student_info['Family ID'] == row['\ufeffID'], 'City')] = row['Town']
+            if student_info.loc[(student_info['Family ID'] == row['\ufeffID'])]['Address'].values[0] == '':
+                student_info.loc[(student_info['Family ID'] == row['\ufeffID'], 'Address')] = row['Street Address']
+
+            # Setting Dormant Students Dormant    
+            if row['Status'] == 'Dormant':
+                student_info.loc[(student_info['Family ID'] == row['\ufeffID'],'Status')] = 'Dormant'
+
+        # Inputting 1:1 Pipeline Students
+        if row['\ufeffID'] in pipe_fam and row['Status'] == 'Prospect (Pipeline)':
+            student_info = pd.concat([student_info,pipe_info.loc[(pipe_info['Family ID'] == row['\ufeffID'])]])
+
+        # Inserting Active ER Students
+        if row['\ufeffID'] in er_families and row['Status'] == 'Live':
+            student_info = pd.concat([student_info,er_info.loc[(er_info['Family ID'] == row['\ufeffID'])]])
+            for item in er_info.loc[(er_info['Family ID'] == row['\ufeffID'])]['ID']:
+                student_info.loc[(student_info['ID'] == item, 'Status')] = 'Live'
+                student_info.loc[(student_info['ID'] == item, 'Early RISErs: Fall')] = 'Enrolled'
+    
 
 ## Checking in Returning Students
 historic_lessons = pd.read_csv(r'/Users/lds/Documents/Student Data/Student Statistics/lessons.csv')
@@ -351,9 +426,38 @@ export = student_info.drop(columns=['Family ID'])
 export.to_csv('Enrollment.csv', index=False)
 
 
+#----------------------------------------------------------------------------------------- Family Mapping -----------------------------------------------------------------------------------------------#
 
+map_data = pd.DataFrame({'Program':[], 'New/Returning':[], 'Status':[], 'City':[], 'Postal Code':[]}) 
 
+uniques = students['ID'].unique()
+num = 0
+for student in uniques:
+    if student_info.loc[(student_info['ID'] == student)]['Postal Code'].values[0] != '':
+        pro = students.loc[(students['ID'] == student)]['Program'].values[0]
+        if pro == 'Explicit Instruction' or pro == 'Homework Support':
+            pro = students.loc[(students['ID'] == student)]['Location'].values[0]
 
+        line = pd.DataFrame({'Program':pro, 'New/Returning':student_info.loc[(student_info['ID'] == student)]['New/Returning'].values[0],
+                         'Status':students.loc[(students['ID'] == student)]['Status'].values[0],
+                         'City':student_info.loc[(student_info['ID'] == student)]['City'].values[0].upper(),
+                         'Country':'Canada',
+                         'Postal Code':student_info.loc[(student_info['ID'] == student)]['Postal Code'].values[0][0:3].upper()}, index=[num])
+        num = num + 1
+        map_data = pd.concat([map_data,line])
+
+# Adding Pipeline Students
+one_to_one_pipeline = student_info.loc[(student_info['One-to-One: Pipeline'] == 'Applied')]
+for student in one_to_one_pipeline['ID'].unique():
+    line = pd.DataFrame({'Program':'One-to-One: Pipeline', 'New/Returning':student_info.loc[(student_info['ID'] == student)]['New/Returning'].values[0],
+                         'Status':'Pipeline',
+                         'City':student_info.loc[(student_info['ID'] == student)]['City'].values[0].upper(),
+                         'Country':'Canada',
+                         'Postal Code':student_info.loc[(student_info['ID'] == student)]['Postal Code'].values[0][0:3].upper()}, index=[num])
+    num = num + 1
+    map_data = pd.concat([map_data,line])
+
+map_data.to_csv('Map_Data.csv', index=False)
 
 
 
