@@ -13,7 +13,7 @@ from openpyxl import load_workbook
 programs = ['Explicit Instruction', 'Homework Support','RISE Now', 'RISE TEAM', 'LDS Access', 'RISE at School']
 other_pro = ['KTEA-3']
 
-locations = ['East Van', 'North Van', 'RISE @ Home', 'LDS Access']
+locations = ['East Van', 'North Van', 'RISE at Home', 'LDS Access']
 loc_convert = ['RISE at LC: East Van', 'RISE at LC: North Van', 'RISE at Home', 'LDS Access']
 
 lessons = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[], 'Program':[], 'Location':[], 'Hours':[], '$/hr from Family':[], 'Date':[]})
@@ -70,7 +70,10 @@ num = 0
 for student in uniques:
     stu_data = lessons.loc[(lessons['ID']==student)]
     first_name = stu_data['First Name'].mode()[0]
-    last_name = stu_data['Last Name'].mode()[0]
+    if ')' in stu_data['Last Name'].mode()[0]:
+        last_name = (stu_data['Last Name'].mode()[0]).split(') ',-1)[1]
+    else:
+        last_name = stu_data['Last Name'].mode()[0]
     start = min(stu_data['Date'])                               # Start Date
     end = max(stu_data['Date'])                                 # Date of last lesson
 
@@ -140,7 +143,9 @@ for student in uniques:
         students.loc[(students['ID'] == student, 'JP or other')] = 'Sponsored'
     if student == '1379956':
         students.loc[(students['ID'] == student, 'Program')] = 'RISE at School'
-        students.loc[(students['ID'] == student, 'Location')] = 'Lord Strathcona Elementary'
+    if student == '1850528':
+        students.loc[(students['ID'] == student, 'Program')] = 'RISE at School'
+        
             
 ## Compiling Funding Data
 funding = load_workbook('THIRD PARTY COVERAGE - 2022-23.xlsx', data_only=True)
@@ -161,7 +166,7 @@ for j in range(len(uniques)):
         except:
             fn = firstname[i].value
             sn = firstname[i].value
-        
+            
         if (student['First Name'].values[0].upper()).replace(' ','') == fn and (student['Last Name'].values[0].upper()).replace(' ','') == sn and student['AFU Funding'].isnull()[0]:
             try:
                 students.loc[(students['ID'] == uniques[j], 'AFU Funding')] = int(AFU_funds[i].value)
@@ -365,7 +370,7 @@ with open('users.csv', newline='') as csvfile:
             pipe_info = pd.concat([pipe_info,line])
 
                                                      
-        elif '2022 Early RISErs - Fall' in row['Labels']:           
+        if '2022 Early RISErs - Fall' in row['Labels']:           
             line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'], 'Date of Birth':row['Date of birth'],
                                  'Grade at Sept 2022': row['Academic Year'],'Family ID':row['Client ID'], 'Parent/Guardian':row['Client Name'], 'Family Email':row['Client Email'],
                                  'Address':row['Street Address'], 'City':row['Town'], 'Postal Code':row['Zipcode/Postcode'], 'School':row['School'], 'Diagnosis':row['Diagnosis'],
@@ -428,7 +433,7 @@ export.to_csv('Enrollment.csv', index=False)
 
 #----------------------------------------------------------------------------------------- Family Mapping -----------------------------------------------------------------------------------------------#
 
-map_data = pd.DataFrame({'Program':[], 'New/Returning':[], 'Status':[], 'City':[], 'Postal Code':[]}) 
+map_data = pd.DataFrame({'Program':[], 'New/Returning':[], 'Status':[], 'Address':[], 'City':[], 'Country':[], 'Postal Code':[]}) 
 
 uniques = students['ID'].unique()
 num = 0
@@ -440,8 +445,9 @@ for student in uniques:
 
         line = pd.DataFrame({'Program':pro, 'New/Returning':student_info.loc[(student_info['ID'] == student)]['New/Returning'].values[0],
                          'Status':students.loc[(students['ID'] == student)]['Status'].values[0],
+                         'Address':student_info.loc[(student_info['ID'] == student)]['Address'].values[0].upper(),
                          'City':student_info.loc[(student_info['ID'] == student)]['City'].values[0].upper(),
-                         'Country':'Canada',
+                         'Country':'CANADA',
                          'Postal Code':student_info.loc[(student_info['ID'] == student)]['Postal Code'].values[0][0:3].upper()}, index=[num])
         num = num + 1
         map_data = pd.concat([map_data,line])
@@ -449,22 +455,37 @@ for student in uniques:
 # Adding Pipeline Students
 one_to_one_pipeline = student_info.loc[(student_info['One-to-One: Pipeline'] == 'Applied')]
 for student in one_to_one_pipeline['ID'].unique():
-    line = pd.DataFrame({'Program':'One-to-One: Pipeline', 'New/Returning':student_info.loc[(student_info['ID'] == student)]['New/Returning'].values[0],
-                         'Status':'Pipeline',
-                         'City':student_info.loc[(student_info['ID'] == student)]['City'].values[0].upper(),
-                         'Country':'Canada',
-                         'Postal Code':student_info.loc[(student_info['ID'] == student)]['Postal Code'].values[0][0:3].upper()}, index=[num])
-    num = num + 1
-    map_data = pd.concat([map_data,line])
+    if student_info.loc[(student_info['ID'] == student)]['Postal Code'].values[0] != '':
+        line = pd.DataFrame({'Program':'One-to-One: Pipeline', 'New/Returning':student_info.loc[(student_info['ID'] == student)]['New/Returning'].values[0],
+                             'Status':'Pipeline',
+                             'Address':student_info.loc[(student_info['ID'] == student)]['Address'].values[0].upper(),
+                             'City':student_info.loc[(student_info['ID'] == student)]['City'].values[0].upper(),
+                             'Country':'CANADA',
+                             'Postal Code':student_info.loc[(student_info['ID'] == student)]['Postal Code'].values[0][0:3].upper()}, index=[num])
+        num = num + 1
+        map_data = pd.concat([map_data,line])
 
-map_data.to_csv('Map_Data.csv', index=False)
+map_export = map_data.drop(columns=['Address'])
+map_export.to_csv('Map_Data.csv', index=False)
 
+## Google Map Update
+map_ev = map_data.loc[(map_data['Program'] == 'RISE at LC: East Van') & (map_data['Status'] == 'Live')]
+map_ev.to_csv('Map_EV.csv', index=False)
 
+map_nv = map_data.loc[(map_data['Program'] == 'RISE at LC: North Van') & (map_data['Status'] == 'Live')]
+map_nv.to_csv('Map_NV.csv', index=False)
 
+map_ah = map_data.loc[(map_data['Program'] == 'RISE at Home') & (map_data['Status'] == 'Live')]
+map_ah.to_csv('Map_AH.csv', index=False)
 
+map_as = map_data.loc[(map_data['Program'] == 'RISE at School') & (map_data['Status'] == 'Live')]
+map_as.to_csv('Map_AS.csv', index=False)
 
+map_ac = map_data.loc[(map_data['Program'] == 'LDS Access') & (map_data['Status'] == 'Live')]
+map_ac.to_csv('Map_AC.csv', index=False)
 
-
+map_pi = map_data.loc[(map_data['Program'] == 'One-to-One: Pipeline')]
+map_pi.to_csv('Map_PI.csv', index=False)
 
 
 
