@@ -131,6 +131,8 @@ for student in uniques:
         students.loc[(students['ID'] == student, 'JP or other')] = 'Grant Funded'
     if pro == 'RISE Now':
         students.loc[(students['ID'] == student, 'JP or other')] = 'Sponsored'
+    if pro == 'RISE TEAM':
+        students.loc[(students['ID'] == student, 'JP or other')] = 'Grant Funded'
     if pro == 'RISE at School' and loc == 'Thunderbird Elementary School':
         students.loc[(students['ID'] == student, 'JP or other')] = 'Sponsored'
     if first_name == 'St.':
@@ -152,22 +154,20 @@ funding = load_workbook('THIRD PARTY COVERAGE - 2022-23.xlsx', data_only=True)
 
 for j in range(len(uniques)):
     student = students.loc[(students['ID'] == uniques[j])]
+    student_n = (student['First Name'].values[0].upper()).replace(' ','') + (student['Last Name'].values[0].upper()).replace(' ','')
     
 # AFU Funding
     funding_ws = funding['AFU']
-    surname = funding_ws['B:B']
-    firstname = funding_ws['C:C']
+    name = funding_ws['A:A']
     expires = funding_ws['H:H']
     AFU_funds = funding_ws['J:J']
-    for i in range(len(surname)):
+    for i in range(len(name)):
         try:
-            fn = (firstname[i].value).replace(' ','')
-            sn = (surname[i].value).replace(' ','')
+            n = (name[i].value).replace(' ','')
         except:
-            fn = firstname[i].value
-            sn = firstname[i].value
+            n = name[i].value
             
-        if (student['First Name'].values[0].upper()).replace(' ','') == fn and (student['Last Name'].values[0].upper()).replace(' ','') == sn and student['AFU Funding'].isnull()[0]:
+        if student_n == n and student['AFU Funding'].isnull()[0]:
             try:
                 students.loc[(students['ID'] == uniques[j], 'AFU Funding')] = int(AFU_funds[i].value)
                 students.loc[(students['ID'] == uniques[j], 'AFU Expiry Date')] = expires[i].value
@@ -176,46 +176,40 @@ for j in range(len(uniques)):
 
 # CKNW Funding
     cknw_ws = funding['CKNW']
-    surname = cknw_ws['B:B']
-    firstname = cknw_ws['C:C']
+    name = cknw_ws['A:A']
     granted = cknw_ws['H:H']
     expires = cknw_ws['I:I']
     cknw_fund = cknw_ws['J:J']
-    for i in range(len(surname)):
+    for i in range(len(name)):
         try:
-            fn = (firstname[i].value).replace(' ','')
-            sn = (surname[i].value).replace(' ','')
+            n = (name[i].value).replace(' ','')
         except:
-            fn = firstname[i].value
-            sn = firstname[i].value
+            n = name[i].value
 
-        if(student['First Name'].values[0].upper()).replace(' ','') == fn and (student['Last Name'].values[0].upper()).replace(' ','') == sn and student['CKNW Funding'].isnull()[0]:
+        if student_n == n and student['CKNW Funding'].isnull()[0]:
             students.loc[(students['ID'] == uniques[j],'CKNW Expiry Date')] = expires[i].value
             students.loc[(students['ID'] == uniques[j],'CKNW Approval Date')] = granted[i].value
             students.loc[(students['ID'] == uniques[j],'CKNW Funding')] = cknw_fund[i].value
 
 # Variety Funding
     variety_ws = funding['VARIETY']
-    surname = variety_ws['B:B']
-    firstname = variety_ws['C:C']
-    granted = variety_ws['H:H']
-    expires = variety_ws['I:I']
-    variety_fund = variety_ws['K:K']
-    for i in range(len(surname)):
+    name = variety_ws['A:A']
+    granted = variety_ws['I:I']
+    expires = variety_ws['J:J']
+    variety_fund = variety_ws['L:L']
+    for i in range(len(name)):
         try:
-            fn = (firstname[i].value).replace(' ','')
-            sn = (surname[i].value).replace(' ','')
+            n = (name[i].value).replace(' ','')
         except:
-            fn = firstname[i].value
-            sn = firstname[i].value
+            n = name[i].value
 
-        if(student['First Name'].values[0].upper()).replace(' ','') == fn and (student['Last Name'].values[0].upper()).replace(' ','') == sn and student['Variety Funding'].isnull()[0]:
+        if student_n == n and student['Variety Funding'].isnull()[0]:
             students.loc[(students['ID'] == uniques[j],'Variety Expiry Date')] = expires[i].value
             students.loc[(students['ID'] == uniques[j],'Variety Approval Date')] = granted[i].value
             students.loc[(students['ID'] == uniques[j],'Variety Funding')] = variety_fund[i].value
 
 # JP Funding
-    jp_ws = funding['JORDANS PRINCIPLE']
+    '''jp_ws = funding['JORDANS PRINCIPLE']
     surname = jp_ws['B:B']
     firstname = jp_ws['C:C']
     granted = jp_ws['G:G']
@@ -231,24 +225,33 @@ for j in range(len(uniques)):
 
         if(student['First Name'].values[0].upper()).replace(' ','') == fn and (student['Last Name'].values[0].upper()).replace(' ','') == sn and student['Other Funding'].isnull()[0]:
             students.loc[(students['ID'] == uniques[j],'JP or other')] = expires[i].value
-            students.loc[(students['ID'] == uniques[j],'Other Funding')] = jp_fund[i].value
+            students.loc[(students['ID'] == uniques[j],'Other Funding')] = jp_fund[i].value'''
+
+# JP Funding
+    jp_ws = funding['VACFSS']
+    name = jp_ws['A:A']
+    for i in range(len(name)):
+        try:
+            n = (name[i].value).replace(' ','')
+        except:
+            n = name[i].value
+
+        if student_n == n and student['Other Funding'].isnull()[0]:
+            students.loc[(students['ID'] == uniques[j],'JP or other')] = 'VACFSS Sponsored'
 
 # Submitted Applications
     apps_ws = funding['Funding Applications']
-    surname = apps_ws['B:B']
-    firstname = apps_ws['C:C']
+    name = apps_ws['A:A']
     funder = apps_ws['D:D']
     submitted = apps_ws['E:E']
     notes = apps_ws['H:H']
-    for i in range(len(surname)):
+    for i in range(len(name)):
         try:
-            fn = (firstname[i].value).replace(' ','')
-            sn = (surname[i].value).replace(' ','')
+            n = (name[i].value).replace(' ','')
         except:
-            fn = firstname[i].value
-            sn = firstname[i].value
+            n = name[i].value
 
-        if(student['First Name'].values[0].upper()).replace(' ','') == fn and (student['Last Name'].values[0].upper()).replace(' ','') == sn:
+        if student_n == n:
             if funder[i].value == 'CKNW':
                 if submitted[i].value != None and submitted[i].value != ' ' and submitted[i].value != '' and str(notes[i].value).lower() != 'declined':
                     students.loc[(students['ID'] == uniques[j],'CKNW Submitted Date')] = submitted[i].value
