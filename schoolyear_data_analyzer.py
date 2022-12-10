@@ -286,13 +286,13 @@ export.to_csv('OnetoOne_feeTable.csv', index=False)
 student_info = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[],'Status':[], 'New/Returning':[],'Date of Birth':[], 'Grade at Sept 2022':[], 'Family ID':[], 'Parent/Guardian':[],
                              'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[], 'One-to-One: East Van':[], 'One-to-One: North Van':[],
                              'One-to-One: RISE at Home':[], 'One-to-One: LDS Access':[], 'One-to-One: Pipeline':[],'RISE at School':[], 'SLP':[], 'RISE TEAM':[], 'RISE Now':[], 'Spring Break Camps':[],
-                             'Early RISErs: Fall':[], 'KTEA-3':[]})
+                             'Early RISErs: Fall':[], 'Early RISErs: Winter':[], 'KTEA-3':[]})
 
 pipe_info = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[],'Status':[], 'New/Returning':[],'Date of Birth':[], 'Grade at Sept 2022':[], 'Family ID':[], 'Parent/Guardian':[],
                         'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[]})
 
 er_info = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[],'Status':[], 'New/Returning':[],'Date of Birth':[], 'Grade at Sept 2022':[], 'Family ID':[], 'Parent/Guardian':[],
-                        'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[]})
+                        'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[], 'Early RISErs: Fall':[], 'Early RISErs: Winter':[]})
 
 # AddStudents from 1 to 1
 students = students.reset_index()
@@ -364,21 +364,49 @@ with open('users.csv', newline='') as csvfile:
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'School')] = row['School']
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'Diagnosis')] = row['Diagnosis']
             student_info.loc[(student_info['ID'] == row['\ufeffID'],'BC Designation')] = row['BC Designation']
+            if '2022/23 RISE TEAM' in row['Labels']:
+                student_info.loc[(student_info['ID'] == row['\ufeffID'],'RISE TEAM')] = 'Enrolled'
                 
         elif '2022/23 One-to-one Instruction' in row['Labels']:
             line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'], 'Status': 'Prospect (Pipeline)', 'Date of Birth':row['Date of birth'],
                                  'Grade at Sept 2022':row['Academic Year'],'Family ID':row['Client ID'], 'Parent/Guardian':row['Client Name'], 'Family Email':row['Client Email'],
                                  'Address':row['Street Address'], 'City':row['Town'], 'Postal Code':row['Zipcode/Postcode'], 'School':row['School'], 'Diagnosis':row['Diagnosis'],
-                                 'BC Designation':row['BC Designation'], 'One-to-One: Pipeline':'Applied'}, index=[num])
+                                 'BC Designation':row['BC Designation'], 'One-to-One: Pipeline':'Applied'}, index=[0])
             pipe_info = pd.concat([pipe_info,line])
 
-                                                     
-        if '2022 Early RISErs - Fall' in row['Labels']:           
-            line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'], 'Date of Birth':row['Date of birth'],
+        elif '2022/23 RISE TEAM' in row['Labels']:           
+            line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'],  'Status': 'Prospect (Pipeline)', 'Date of Birth':row['Date of birth'],
                                  'Grade at Sept 2022': row['Academic Year'],'Family ID':row['Client ID'], 'Parent/Guardian':row['Client Name'], 'Family Email':row['Client Email'],
                                  'Address':row['Street Address'], 'City':row['Town'], 'Postal Code':row['Zipcode/Postcode'], 'School':row['School'], 'Diagnosis':row['Diagnosis'],
-                                 'BC Designation':row['BC Designation']}, index=[0])
-            er_info = pd.concat([er_info,line])
+                                 'BC Designation':row['BC Designation'], 'RISE Now':'Applied'}, index=[0])
+            pipe_info = pd.concat([pipe_info,line])
+
+        elif '2022/23 RISE Now' in row['Labels']:           
+            line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'],  'Status': 'Prospect (Pipeline)', 'Date of Birth':row['Date of birth'],
+                                 'Grade at Sept 2022': row['Academic Year'],'Family ID':row['Client ID'], 'Parent/Guardian':row['Client Name'], 'Family Email':row['Client Email'],
+                                 'Address':row['Street Address'], 'City':row['Town'], 'Postal Code':row['Zipcode/Postcode'], 'School':row['School'], 'Diagnosis':row['Diagnosis'],
+                                 'BC Designation':row['BC Designation'], 'RISE TEAM':'Applied'}, index=[0])
+            pipe_info = pd.concat([pipe_info,line])
+                                                     
+        if '2022 Early RISErs - Fall' in row['Labels']:
+            if row['\ufeffID'] not in er_info['ID'].unique():
+                line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'], 'Date of Birth':row['Date of birth'],
+                                 'Grade at Sept 2022': row['Academic Year'],'Family ID':row['Client ID'], 'Parent/Guardian':row['Client Name'], 'Family Email':row['Client Email'],
+                                 'Address':row['Street Address'], 'City':row['Town'], 'Postal Code':row['Zipcode/Postcode'], 'School':row['School'], 'Diagnosis':row['Diagnosis'],
+                                 'BC Designation':row['BC Designation'], 'Early RISErs: Fall': 'Enrolled'}, index=[0])
+                er_info = pd.concat([er_info,line])
+            else:
+                er_info.loc[(er_info['ID'] == row['\ufeffID'], 'Early RISErs: Fall')] = 'Enrolled'
+
+        if '2023 Early RISErs - Winter' in row['Labels']:
+            if row['\ufeffID'] not in er_info['ID'].unique():
+                line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'], 'Date of Birth':row['Date of birth'],
+                                 'Grade at Sept 2022': row['Academic Year'],'Family ID':row['Client ID'], 'Parent/Guardian':row['Client Name'], 'Family Email':row['Client Email'],
+                                 'Address':row['Street Address'], 'City':row['Town'], 'Postal Code':row['Zipcode/Postcode'], 'School':row['School'], 'Diagnosis':row['Diagnosis'],
+                                 'BC Designation':row['BC Designation'], 'Early RISErs: Winter': 'Enrolled'}, index=[0])
+                er_info = pd.concat([er_info,line])
+            else:
+                er_info.loc[(er_info['ID'] == row['\ufeffID'], 'Early RISErs: Winter')] = 'Enrolled'                
 
 # Openning the Client Export
 families = student_info['Family ID'].unique()
@@ -404,13 +432,24 @@ with open('users (1).csv', newline='') as csvfile:
         # Inputting 1:1 Pipeline Students
         if row['\ufeffID'] in pipe_fam and row['Status'] == 'Prospect (Pipeline)':
             student_info = pd.concat([student_info,pipe_info.loc[(pipe_info['Family ID'] == row['\ufeffID'])]])
+        elif row['\ufeffID'] in pipe_fam and row['Status'] == 'Live':
+            for item in pipe_info.loc[(pipe_info['Family ID'] == row['\ufeffID'])]['ID']:
+                if pipe_info.loc[(pipe_info['ID'] == item)]['RISE TEAM'].item() == 'Applied':
+                    pipe_info.loc[(pipe_info['ID'] == item, 'RISE TEAM')] = 'Enrolled'
+                    student_info = pd.concat([student_info,pipe_info.loc[(pipe_info['ID'] == item)]])
+                    
 
         # Inserting Active ER Students
         if row['\ufeffID'] in er_families and row['Status'] == 'Live':
             student_info = pd.concat([student_info,er_info.loc[(er_info['Family ID'] == row['\ufeffID'])]])
             for item in er_info.loc[(er_info['Family ID'] == row['\ufeffID'])]['ID']:
                 student_info.loc[(student_info['ID'] == item, 'Status')] = 'Live'
-                student_info.loc[(student_info['ID'] == item, 'Early RISErs: Fall')] = 'Enrolled'
+        elif row['\ufeffID'] in er_families and row['Status'] == 'Prospect (Pipeline)':
+            for item in er_info.loc[(er_info['Family ID'] == row['\ufeffID'])]['ID']:
+                if er_info.loc[(er_info['ID'] == item)]['Early RISErs: Winter'].item() == 'Enrolled':
+                    student_info = pd.concat([student_info,er_info.loc[(er_info['ID'] == item)]])
+                    student_info.loc[(student_info['ID'] == item, 'Status')] = 'Prospect (Pipeline)'
+                    student_info.loc[(student_info['ID'] == item, 'Early RISErs: Winter')] = 'Applied'
     
 
 ## Checking in Returning Students
@@ -489,28 +528,4 @@ map_ac.to_csv('Map_AC.csv', index=False)
 
 map_pi = map_data.loc[(map_data['Program'] == 'One-to-One: Pipeline')]
 map_pi.to_csv('Map_PI.csv', index=False)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
