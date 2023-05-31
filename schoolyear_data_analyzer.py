@@ -6,6 +6,7 @@ import csv
 import pandas as pd
 import numpy as np
 from openpyxl import load_workbook
+import math
 
 #--------------------------------------------------------------------------------- One to One Fee Table Compiling ---------------------------------------------------------------------------------------#
 
@@ -71,7 +72,10 @@ for student in uniques:
     stu_data = lessons.loc[(lessons['ID']==student)]
     first_name = stu_data['First Name'].mode()[0]
     if ')' in stu_data['Last Name'].mode()[0]:
-        last_name = (stu_data['Last Name'].mode()[0]).split(') ',-1)[1]
+        try:
+            last_name = (stu_data['Last Name'].mode()[0]).split(') ',-1)[1]
+        except:
+            last_name = (stu_data['Last Name'].mode()[0]).split('( ',-1)[0]
     else:
         last_name = stu_data['Last Name'].mode()[0]
     start = min(stu_data['Date'])                               # Start Date
@@ -84,7 +88,12 @@ for student in uniques:
     if hrs_sum != 0:
         status = 'Live'
         pro = filtered['Program'].mode()[0]
+        
         loc = filtered['Location'].mode()[0]
+        if len(filtered['Location'].mode()) > 1:                # Adding a North Van Classification Bias
+            if filtered['Location'].mode()[1] == 'RISE at LC: North Van':
+                loc = 'RISE at LC: North Van'
+                
         nx_lesson = min(filtered['Date'])                       # Date of next lesson
                
         # Determining Weeks of Lessons   
@@ -101,11 +110,13 @@ for student in uniques:
             else:                                               # and ends before Spring Break
                 weeks = ((abs(end - nx_lesson).days)/7)
         else:                                                   # Starts after Spring Break
-            weeks = ((abs(end - nx_lesson).days)/7)
+            weeks = math.ceil(((end - nx_lesson).days+1)/7)
 
         if weeks < 1:
             weeks = 1
 
+        
+            
         hrs = hrs_sum/weeks                                 # Calcualate hours per week
         hrs = round(hrs * 2) / 2                            # Round to the nearest .5
         if hrs == 0:
@@ -143,10 +154,9 @@ for student in uniques:
         students.loc[(students['ID'] == student, 'Program')] = 'RISE at School'
         students.loc[(students['ID'] == student, 'Location')] = 'KLEOS'
         students.loc[(students['ID'] == student, 'JP or other')] = 'Sponsored'
-    if student == '1379956':
-        students.loc[(students['ID'] == student, 'Program')] = 'RISE at School'
-    if student == '1850528':
-        students.loc[(students['ID'] == student, 'Program')] = 'RISE at School'
+    if student == '1379956' or student == '1929127' or student == '1822481' or student == '1841389':
+        students.loc[(students['ID'] == student, 'Location')] = 'LDS Access'
+        students.loc[(students['ID'] == student, 'JP or other')] = 'Grant Funded'
         
             
 ## Compiling Funding Data
@@ -285,14 +295,14 @@ export.to_csv('OnetoOne_feeTable.csv', index=False)
 
 student_info = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[],'Status':[], 'New/Returning':[],'Date of Birth':[], 'Grade at Sept 2022':[], 'Family ID':[], 'Parent/Guardian':[],
                              'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[], 'One-to-One: East Van':[], 'One-to-One: North Van':[],
-                             'One-to-One: RISE at Home':[], 'One-to-One: LDS Access':[], 'One-to-One: Pipeline':[],'RISE at School':[], 'SLP':[], 'RISE TEAM':[], 'RISE Now':[], 'Spring Break Camps':[],
-                             'Early RISErs: Fall':[], 'Early RISErs: Winter':[], 'KTEA-3':[]})
+                             'One-to-One: RISE at Home':[], 'One-to-One: LDS Access':[], 'One-to-One: Pipeline':[],'RISE at School':[], 'SLP':[], 'RISE TEAM':[], 'RISE Now':[], 
+                             'Early RISErs: Fall':[], 'Early RISErs: Winter':[], 'Early RISErs: Spring':[], 'KTEA-3':[]})
 
 pipe_info = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[],'Status':[], 'New/Returning':[],'Date of Birth':[], 'Grade at Sept 2022':[], 'Family ID':[], 'Parent/Guardian':[],
                         'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[]})
 
 er_info = pd.DataFrame({'ID':[], 'First Name':[], 'Last Name':[],'Status':[], 'New/Returning':[],'Date of Birth':[], 'Grade at Sept 2022':[], 'Family ID':[], 'Parent/Guardian':[],
-                        'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[], 'Early RISErs: Fall':[], 'Early RISErs: Winter':[]})
+                        'Family Email':[], 'Address':[], 'City':[], 'Postal Code':[], 'School':[], 'Diagnosis':[], 'BC Designation':[], 'Early RISErs: Fall':[], 'Early RISErs: Winter':[], 'Early RISErs: Spring':[]})
 
 # AddStudents from 1 to 1
 students = students.reset_index()
@@ -338,8 +348,8 @@ stu_uni = student_info['ID'].unique()
 
 for student in other_uni:
     if student not in stu_uni:
-        fn = other_lessons.loc[(other_lessons['ID'] == student)]['First Name'][0]
-        ln = other_lessons.loc[(other_lessons['ID'] == student)]['Last Name'][0]
+        fn = other_lessons.loc[(other_lessons['ID'] == student)]['First Name'].values[0]
+        ln = other_lessons.loc[(other_lessons['ID'] == student)]['Last Name'].values[0]
         line = pd.DataFrame({'ID':student, 'First Name':fn, 'Last Name':ln, 'Status':'Live'}, index=[num])
         student_info = pd.concat([student_info,line])
         num = num + 1
@@ -406,7 +416,17 @@ with open('users.csv', newline='') as csvfile:
                                  'BC Designation':row['BC Designation'], 'Early RISErs: Winter': 'Enrolled'}, index=[0])
                 er_info = pd.concat([er_info,line])
             else:
-                er_info.loc[(er_info['ID'] == row['\ufeffID'], 'Early RISErs: Winter')] = 'Enrolled'                
+                er_info.loc[(er_info['ID'] == row['\ufeffID'], 'Early RISErs: Winter')] = 'Enrolled'
+
+        if '2023 Early RISErs - Spring' in row['Labels']:
+            if row['\ufeffID'] not in er_info['ID'].unique():
+                line = pd.DataFrame({'ID':row['\ufeffID'], 'First Name': row['First name'], 'Last Name': row['Last name'], 'Date of Birth':row['Date of birth'],
+                                 'Grade at Sept 2022': row['Academic Year'],'Family ID':row['Client ID'], 'Parent/Guardian':row['Client Name'], 'Family Email':row['Client Email'],
+                                 'Address':row['Street Address'], 'City':row['Town'], 'Postal Code':row['Zipcode/Postcode'], 'School':row['School'], 'Diagnosis':row['Diagnosis'],
+                                 'BC Designation':row['BC Designation'], 'Early RISErs: Spring': 'Enrolled'}, index=[0])
+                er_info = pd.concat([er_info,line])
+            else:
+                er_info.loc[(er_info['ID'] == row['\ufeffID'], 'Early RISErs: Spring')] = 'Enrolled' 
 
 # Openning the Client Export
 families = student_info['Family ID'].unique()
@@ -450,7 +470,8 @@ with open('users (1).csv', newline='') as csvfile:
                     student_info = pd.concat([student_info,er_info.loc[(er_info['ID'] == item)]])
                     student_info.loc[(student_info['ID'] == item, 'Status')] = 'Prospect (Pipeline)'
                     student_info.loc[(student_info['ID'] == item, 'Early RISErs: Winter')] = 'Applied'
-    
+                if er_info.loc[(er_info['ID'] == item)]['Early RISErs: Spring'].item() == 'Enrolled':
+                    student_info = pd.concat([student_info,er_info.loc[(er_info['ID'] == item)]])
 
 ## Checking in Returning Students
 historic_lessons = pd.read_csv(r'/Users/lds/Documents/Student Data/Student Statistics/lessons.csv')
@@ -468,6 +489,9 @@ for student in uniques:
     else:
         student_info.loc[(student_info['ID'] == student,'New/Returning')] = 'New'
         
+#Reomoving Double Entries
+student_info = student_info[(student_info['ID'] != '1574698')]
+students = students[(students['ID'] != '1574698')]
 
 export = student_info.drop(columns=['Family ID'])
 export.to_csv('Enrollment.csv', index=False)
